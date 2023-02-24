@@ -18,7 +18,6 @@ pub struct Console {
 #[derive(Debug, Deserialize, Clone)]
 #[allow(unused)]
 pub struct Settings {
-    pub debug: bool,
     pub dell: Console,
     pub lenovo: Console,
     pub hpe: Console,

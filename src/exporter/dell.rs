@@ -1,4 +1,4 @@
-use log::error;
+use log::{error, info};
 use reqwest;
 use reqwest::header::{ACCEPT, CONTENT_TYPE};
 use reqwest::Client;
@@ -50,6 +50,7 @@ pub async fn collect_dell_metrics(settings: Console, tx: mpsc::Sender<Node>) {
         Ok(client) => client,
         Err(error) => panic!("Problem creating client: {:?}", error),
     };
+    info!("dell client ready. interval: {}", settings.interval_in_min);
     let mut interval = time::interval(Duration::from_secs(settings.interval_in_min * 60));
     let mut host = settings.host.clone();
     host.set_path("/api/DeviceService/Devices");
@@ -57,6 +58,7 @@ pub async fn collect_dell_metrics(settings: Console, tx: mpsc::Sender<Node>) {
     loop {
         let password: Option<String> = settings.password.to_owned();
         interval.tick().await;
+        info!("executing dell metric collect");
 
         let resp = match client
             .get(url)

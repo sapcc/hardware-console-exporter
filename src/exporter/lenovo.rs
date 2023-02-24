@@ -1,4 +1,4 @@
-use log::error;
+use log::{error, info};
 use reqwest;
 use reqwest::header::{ACCEPT, CONTENT_TYPE};
 use reqwest::Client;
@@ -57,14 +57,18 @@ pub async fn collect_lenovo_metrics(settings: Console, tx: mpsc::Sender<Node>) {
         Ok(client) => client,
         Err(error) => panic!("error creating reqwest client: {:?}", error),
     };
-
-    let mut interval = time::interval(Duration::from_millis(settings.interval_in_min * 60));
+    info!(
+        "lenovo client ready. interval: {}",
+        settings.interval_in_min
+    );
+    let mut interval = time::interval(Duration::from_secs(settings.interval_in_min * 60));
     let mut host = settings.host.clone();
     host.set_path("nodes");
     let url = host.as_str();
     loop {
         let password: Option<String> = settings.password.to_owned();
         interval.tick().await;
+        info!("executing lenovo metric collect");
 
         let resp = match client
             .get(url)

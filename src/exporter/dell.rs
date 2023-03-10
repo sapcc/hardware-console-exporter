@@ -45,13 +45,13 @@ struct APIResponse {
     value: Vec<Device>,
 }
 
-pub async fn collect_dell_metrics(settings: Console, tx: mpsc::Sender<Node>) {
+pub async fn collect_dell_metrics(settings: Console, interval: u64, tx: mpsc::Sender<Node>) {
     let client = match Client::builder().danger_accept_invalid_certs(true).build() {
         Ok(client) => client,
         Err(error) => panic!("Problem creating client: {:?}", error),
     };
-    info!("dell client ready. interval: {}", settings.interval_in_min);
-    let mut interval = time::interval(Duration::from_secs(settings.interval_in_min * 60));
+    info!("dell client ready. interval: {}", interval);
+    let mut interval = time::interval(Duration::from_secs(interval * 60));
     let mut host = settings.host.clone();
     host.set_path("/api/DeviceService/Devices");
     let url = host.as_str();

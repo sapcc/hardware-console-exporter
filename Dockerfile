@@ -4,7 +4,7 @@ ENV PKG_CONFIG_ALLOW_CROSS=1
 WORKDIR /usr/src/hardware-console-exporter
 COPY . .
 
-RUN cargo install --path .
+RUN cargo install --config net.git-fetch-with-cli=true --path .
 
 FROM keppel.eu-de-1.cloud.sap/ccloud-gcr-mirror/distroless/cc-debian10
 LABEL maintainer="Stefan Hipfel <stefan.hipfel@sap.com>"

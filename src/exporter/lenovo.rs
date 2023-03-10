@@ -52,16 +52,13 @@ struct APIResponse {
     value: Vec<Device>,
 }
 
-pub async fn collect_lenovo_metrics(settings: Console, tx: mpsc::Sender<Node>) {
+pub async fn collect_lenovo_metrics(settings: Console, interval: u64, tx: mpsc::Sender<Node>) {
     let client = match Client::builder().danger_accept_invalid_certs(true).build() {
         Ok(client) => client,
         Err(error) => panic!("error creating reqwest client: {:?}", error),
     };
-    info!(
-        "lenovo client ready. interval: {}",
-        settings.interval_in_min
-    );
-    let mut interval = time::interval(Duration::from_secs(settings.interval_in_min * 60));
+    info!("lenovo client ready. interval: {}", interval);
+    let mut interval = time::interval(Duration::from_secs(interval * 60));
     let mut host = settings.host.clone();
     host.set_path("nodes");
     let url = host.as_str();

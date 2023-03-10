@@ -11,8 +11,6 @@ pub struct Console {
     pub domain: Option<String>,
     pub username: String,
     pub password: Option<String>,
-    #[serde(default = "default_interval")]
-    pub interval_in_min: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -21,6 +19,8 @@ pub struct Settings {
     pub dell: Console,
     pub lenovo: Console,
     pub hpe: Console,
+    #[serde(default = "default_interval")]
+    pub interval_in_min: u64,
 }
 
 fn default_interval() -> u64 {

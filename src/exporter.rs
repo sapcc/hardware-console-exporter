@@ -1,10 +1,13 @@
 use actix_web;
+use log::debug;
 use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::family::Family;
 use prometheus_client::metrics::gauge::Gauge;
 use prometheus_client::registry::Registry;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
+use tokio::time;
+use tokio::time::*;
 
 pub mod dell;
 pub mod hpe;
@@ -49,7 +52,7 @@ impl Exporter {
     }
 
     pub fn inc_requests(&self, node: Node) {
-        self.metrics.get_or_create(&node).inc();
+        self.metrics.get_or_create(&node).set(1);
     }
 
     pub async fn run(&mut self) {
@@ -57,15 +60,28 @@ impl Exporter {
         let tx01 = tx.clone();
         let tx02 = tx.clone();
         let s = self.settings.clone();
+
+        let mut interval = time::interval(Duration::from_secs(self.settings.interval_in_min * 60));
+        let m = self.metrics.clone();
+
         actix_web::rt::spawn(async move {
-            collect_dell_metrics(s.dell, tx).await;
+            loop {
+                interval.tick().await;
+                debug!("clearing metrics");
+                m.clear();
+            }
+        });
+
+        actix_web::rt::spawn(async move {
+            collect_dell_metrics(s.dell, s.interval_in_min, tx).await;
         });
         actix_web::rt::spawn(async move {
-            collect_lenovo_metrics(s.lenovo, tx01).await;
+            collect_lenovo_metrics(s.lenovo, s.interval_in_min, tx01).await;
         });
         actix_web::rt::spawn(async move {
-            collect_hpe_metrics(s.hpe, tx02).await;
+            collect_hpe_metrics(s.hpe, s.interval_in_min, tx02).await;
         });
+
         while let Some(n) = rx.recv().await {
             println!("got = {:?}", n.device_name);
             if !self.nodes.contains(&n.device_name) {

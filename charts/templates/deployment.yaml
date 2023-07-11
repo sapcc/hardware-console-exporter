@@ -42,7 +42,7 @@ spec:
           envFrom:
             - secretRef:
                 name: hardware-console-exporter
-          image: "{{ .Values.global.registry }}/{{ .Values.image }}:{{ .Values.tag }}"
+          image: "{{ .Values.global.registry }}/{{ .Values.hardware_console_exporter.image }}:{{ .Values.hardware_console_exporter.tag }}"
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

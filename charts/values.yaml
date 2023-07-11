@@ -9,10 +9,11 @@ owner-info:
 
 replicaCount: 1
 
-image:
-  repository: hardware-console-exporter
-  pullPolicy: IfNotPresent
-  tag: "latest"
+hardware_console_exporter:
+  image:
+    repository: hardware-console-exporter
+    pullPolicy: IfNotPresent
+    tag: "latest"
 
 consoles:
   dell:

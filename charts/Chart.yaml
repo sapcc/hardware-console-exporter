@@ -1,0 +1,8 @@
+apiVersion: v2
+name: hardware-console-exporter
+description: A Helm chart for Kubernetes
+version: 0.1.0
+dependencies:
+  - name: owner-info
+    repository: https://charts.eu-de-2.cloud.sap
+    version: ~0.2.0

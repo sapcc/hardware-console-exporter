@@ -26,7 +26,7 @@ pub struct Device {
 
 impl From<Device> for Node {
     fn from(d: Device) -> Self {
-        let status = if d.status == 1000 { 1 } else { 0 };
+        let status = if d.status == 1000 { 1 } else { 0 }; //1000: normal, 3000: warning, 4000:critical
         let power = if d.power_state == 17 { 1 } else { 0 };
         let connection = if d.connection_state { 1 } else { 0 };
         Self {
@@ -35,6 +35,7 @@ impl From<Device> for Node {
             model: d.model,
             power_state: power,
             connection_state: connection,
+            compliant: 0,
         }
     }
 }

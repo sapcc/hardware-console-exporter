@@ -11,6 +11,8 @@ pub struct Console {
     pub domain: Option<String>,
     pub username: String,
     pub password: Option<String>,
+    #[serde(default = "default_policy_name")]
+    pub policy_name: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -25,6 +27,10 @@ pub struct Settings {
 
 fn default_interval() -> u64 {
     30
+}
+
+fn default_policy_name() -> String {
+    "".to_string()
 }
 
 fn de_url<'de, D>(deserializer: D) -> Result<Url, D::Error>

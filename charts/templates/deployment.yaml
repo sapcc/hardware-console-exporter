@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hardware-console-exporter
+  name: hardware-console-exporter
+  namespace: monsoon3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hardware-console-exporter
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: hardware-console-exporter
+      annotations:
+        configmap-etc-hash: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        prometheus.io/scrape: "true"
+        prometheus.io/targets: {{  required ".Values.alerts.prometheus missing" .Values.alerts.prometheus | quote }}
+    spec:
+      containers:
+        - name: debug
+          image: keppel.eu-de-1.cloud.sap/ccloud-dockerhub-mirror/library/ubuntu
+          command: ["/bin/bash", "-c", "--"]
+          args: ["while true; do sleep 30; done;"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/default.yaml
+              subPath: default.yaml
+        - name: exporter
+          env:
+            - name: RUST_LOG
+              value: "4"
+            - name: RUST_BACKTRACE
+              value: "1"
+          envFrom:
+            - secretRef:
+                name: hardware-console-exporter
+          image: "{{ .Values.global.registry }}/{{ .Values.image }}:{{ .Values.tag }}"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /metrics
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/default.yaml
+              subPath: default.yaml
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: config
+          configMap:
+            name: hardware-console-exporter-config
+            items:
+              - key: default.yaml
+                path: default.yaml

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hardware-console-exporter-config
+  namespace: monsoon3
+  labels:
+    app: hardware-console-exporter
+data:
+  default.yaml: |
+    debug: true
+    dell:
+      host: "https:/openmanage.{{ .Values.global.region }}.cloud.sap"
+      username: {{ .Values.consoles.dell.username }}
+    hpe:
+      host: "https://oneview.{{ .Values.global.region }}.cloud.sap"
+      loginDomain: "local"
+      username: {{ .Values.consoles.hpe.username }}
+    lenovo:
+      host: "https://lxca.{{ .Values.global.region }}.cloud.sap"
+      username: {{ .Values.consoles.lenovo.username }}
+      policy_name: {{ .Values.consoles.lenovo.policy_name }}
+    interval_in_min: {{ .Values.consoles.interval_in_min }}

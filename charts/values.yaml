@@ -1,0 +1,52 @@
+owner-info:
+  support-group: foundation
+  service: baremetal
+  maintainers:
+    - Stefan Hipfel
+    - Bernd Kuespert
+    - Jens Sandmann
+  helm-chart-url: https://github.com/sapcc/helm-charts/tree/master/openstack/ironic
+
+replicaCount: 1
+
+image:
+  repository: hardware-console-exporter
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+consoles:
+  dell:
+    username: "hw_admin"
+  hpe:
+    username: "hw_admin"
+  lenovo:
+    username: "hw_admin"
+    policy_name: "firmware_70u3i"
+  # Interval in minutes to run the console exporter.
+  interval_in_min: 10
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 200m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Deploy Prometheus alerts.
+alerts:
+  enabled: true
+  # Name of the Prometheus to which the alerts should be assigned to.
+  prometheus: openstack
+  support_group: foundation

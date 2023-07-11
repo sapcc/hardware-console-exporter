@@ -30,6 +30,7 @@ pub struct Node {
     pub status: u16,
     pub connection_state: u8,
     pub power_state: u16,
+    pub compliant: u8,
 }
 
 #[derive(Debug)]
@@ -52,7 +53,9 @@ impl Exporter {
     }
 
     pub fn inc_requests(&self, node: Node) {
-        self.metrics.get_or_create(&node).set(1);
+        self.metrics
+            .get_or_create(&node)
+            .set(i64::from(node.compliant));
     }
 
     pub async fn run(&mut self) {

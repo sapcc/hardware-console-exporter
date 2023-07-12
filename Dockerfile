@@ -6,7 +6,7 @@ COPY . .
 
 RUN cargo install --config net.git-fetch-with-cli=true --path .
 
-FROM keppel.eu-de-1.cloud.sap/ccloud-gcr-mirror/distroless/cc-debian10
+FROM keppel.eu-de-1.cloud.sap/ccloud-gcr-mirror/distroless/cc-debian11
 LABEL maintainer="Stefan Hipfel <stefan.hipfel@sap.com>"
 LABEL source_repository="https://github.com/sapcc/hardware-console-exporter"
 

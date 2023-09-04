@@ -4,8 +4,7 @@ use reqwest::Client;
 use reqwest::{self};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tokio::time;
-use tokio::time::*;
+use tokio::time::{Duration, interval};
 
 use super::Console;
 use super::Node;
@@ -79,14 +78,13 @@ struct ComplianceResult {
     endpoint_compliant: String,
 }
 
-pub async fn collect_lenovo_metrics(settings: Console, interval: u64, tx: mpsc::Sender<Node>) {
-    info!("lenovo client ready. interval: {}", interval);
-    let mut interval = time::interval(Duration::from_secs(interval * 60));
+pub async fn collect_lenovo_metrics(settings: Console, interval_sec: u64, tx: mpsc::Sender<Node>) {
+    info!("lenovo client ready. interval: {}", interval_sec);
+    let mut interval = interval(Duration::from_secs(interval_sec * 60));
     let mut host = settings.host.clone();
     host.set_path("nodes");
 
     loop {
-        let password: Option<String> = settings.password.to_owned();
         interval.tick().await;
         info!("executing lenovo metric collect");
 

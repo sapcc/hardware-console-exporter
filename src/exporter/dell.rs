@@ -4,8 +4,7 @@ use reqwest::header::{ACCEPT, CONTENT_TYPE};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tokio::time;
-use tokio::time::*;
+use tokio::time::{sleep, Duration, interval};
 
 use super::Console;
 use super::Node;
@@ -46,18 +45,58 @@ struct APIResponse {
     value: Vec<Device>,
 }
 
-pub async fn collect_dell_metrics(settings: Console, interval: u64, tx: mpsc::Sender<Node>) {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Compliance {
+    #[serde(rename = "Id")]
+    id: u16,
+    #[serde(rename = "TaskId")]
+    task_id : u16,
+    #[serde(rename = "Name")]
+    name: String,
+    #[serde(rename = "RepositoryName")]
+    repository_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct CompliancePolicy {
+    value: Vec<Compliance>,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct ComplianceReport {
+    #[serde(rename = "DeviceId")]
+    id: u16, 
+    #[serde(rename = "DeviceName")] 
+    name: String,
+    #[serde(rename = "DeviceModel")] 
+    model: String,
+    #[serde(rename = "FirmwareStatus")]
+    firmware_status: String,
+    #[serde(rename = "ComplianceStatus")]
+    compliance_status: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct ComplianceReports {
+    #[serde(alias = "value")]
+    value: Vec<ComplianceReport>,
+}
+
+
+pub async fn collect_dell_metrics(settings: Console, interval_sec: u64, tx: mpsc::Sender<Node>) {
     let client = match Client::builder().danger_accept_invalid_certs(true).build() {
         Ok(client) => client,
         Err(error) => panic!("Problem creating client: {:?}", error),
     };
-    info!("dell client ready. interval: {}", interval);
-    let mut interval = time::interval(Duration::from_secs(interval * 60));
+    info!("dell client ready. interval: {}", interval_sec);
+    let mut interval = interval(Duration::from_secs(interval_sec * 60));
+    let comliant_nodes = get_compliant_nodes(settings.clone()).await.unwrap_or_else(|e| {
+        error!("error getting compliant nodes: {}", e);
+        ComplianceReports{value: vec![]}
+    });
     let mut host = settings.host.clone();
     host.set_path("/api/DeviceService/Devices");
     let url = host.as_str();
     loop {
-        let password: Option<String> = settings.password.to_owned();
         interval.tick().await;
         info!("executing dell metric collect");
 
@@ -65,7 +104,7 @@ pub async fn collect_dell_metrics(settings: Console, interval: u64, tx: mpsc::Se
             .get(url)
             .header(CONTENT_TYPE, "application/json")
             .header(ACCEPT, "application/json")
-            .basic_auth(settings.username.to_string(), password)
+            .basic_auth(settings.username.to_string(), settings.password.to_owned())
             .send()
             .await
         {
@@ -84,14 +123,77 @@ pub async fn collect_dell_metrics(settings: Console, interval: u64, tx: mpsc::Se
                     continue;
                 }
             };
-
-            println!("{:?}", json.value[0].device_name);
+            
             for device in json.value {
-                let node = Node::from(device);
+                let cloned = device.clone();
+                let mut node = Node::from(device);
+                comliant_nodes.value.iter()
+                    .find(|c: &&ComplianceReport| cloned.device_name == c.name)
+                    .map(|c| if c.compliance_status == "OK" {node.compliant = 1});
                 tx.send(node).await.unwrap_or_else(|e| {
                     error!("error sending node on channel: {:?}", e);
                 })
             }
+        }
+    }
+}
+
+async fn get_compliant_nodes(settings: Console) -> Result<ComplianceReports, reqwest::Error>{
+    let client = match Client::builder().danger_accept_invalid_certs(true).build() {
+        Ok(client) => client,
+        Err(error) => panic!("Problem creating client: {:?}", error),
+    };
+    let mut host = settings.host.clone();
+    host.set_path("/api/UpdateService/Baselines");
+    let url = host.as_str();
+    let json = client
+        .get(url)
+        .header(CONTENT_TYPE, "application/json")
+        .header(ACCEPT, "application/json")
+        .basic_auth(settings.username.to_string(), settings.password.to_owned())
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<CompliancePolicy>()
+        .await?;
+
+    let task = json.value.iter().find(|v| v.repository_name == "firmware_70u3l" && v.name == "firmware_70u3l");
+    match task {
+        Some(t) => {
+            let mut host = settings.host.clone();
+            host.set_path("/api/JobService/Actions/JobService.RunJobs");
+            let url = host.as_str();
+            client
+                .post(url)
+                .header(CONTENT_TYPE, "application/json")
+                .header(ACCEPT, "application/json")
+                .basic_auth(settings.username.to_string(), settings.password.to_owned())
+                .json(&serde_json::json!({"JobIds": [t.task_id], "AllJobs":false}))
+                .send()
+                .await?
+                .error_for_status()?;
+   
+            info!("compliance check started");
+            sleep(Duration::from_secs(20)).await;
+            info!("compliance check finished");
+            let mut host = settings.host.clone();
+            host.set_path(format!("/api/UpdateService/Baselines({})/DeviceComplianceReports", t.id).as_str());
+            let url = host.as_str();
+            let json = client
+                .get(url)
+                .header(CONTENT_TYPE, "application/json")
+                .header(ACCEPT, "application/json")
+                .basic_auth(settings.username.to_string(), settings.password.to_owned())
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<ComplianceReports>()
+                .await?;
+            return Ok(json);
+        }
+        None => {
+            error!("no compliance task found");
+            return Ok(ComplianceReports{value: vec![]})
         }
     }
 }

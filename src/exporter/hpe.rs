@@ -1,12 +1,10 @@
-use actix_web::web::delete;
 use log::{error, info};
 use reqwest;
 use reqwest::header::{ACCEPT, CONTENT_TYPE};
+use tokio::time::{Duration, interval};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tokio::time;
-use tokio::time::*;
 
 use super::Console;
 use super::Node;
@@ -61,7 +59,7 @@ struct Session {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Compliance {
-    keep: bool,
+    //keep: bool,
     #[serde(rename = "templateCompliance")]
     compliance: String,
     #[serde(rename = "type")]
@@ -74,9 +72,9 @@ struct ComplianceResult {
     members: Vec<Compliance>,
 }
 
-pub async fn collect_hpe_metrics(settings: Console, interval: u64, tx: mpsc::Sender<Node>) {
-    info!("hpe client ready. interval: {}", interval);
-    let mut interval = time::interval(Duration::from_secs(interval * 60));
+pub async fn collect_hpe_metrics(settings: Console, interval_sec: u64, tx: mpsc::Sender<Node>) {
+    info!("hpe client ready. interval: {}", interval_sec);
+    let mut interval = interval(Duration::from_secs(interval_sec * 60));
     let mut host = settings.host.clone();
     host.set_path("rest/server-hardware");
 
@@ -143,26 +141,17 @@ pub async fn collect_hpe_metrics(settings: Console, interval: u64, tx: mpsc::Sen
         let mut host = settings.host.clone();
         host.set_path("rest/server-profiles");
         host.set_query(Some(format!("filter='uuid' = '{}'", device.uuid).as_str()));
-        let resp = match get_request_builder(reqwest::Method::GET, Some(token.to_string()), host)
+        let json = get_request_builder(reqwest::Method::GET, Some(token.to_string()), host)
             .send()
-            .await
-        {
-            Ok(v) => v,
-            Err(e) => {
-                return Err(e);
-            }
-        };
-        if resp.status() == reqwest::StatusCode::OK {
-            let json = match resp.json::<ComplianceResult>().await {
-                Ok(parsed) => parsed,
-                Err(e) => {
-                    return Err(e);
-                }
-            };
-            if json.members.len() > 0 {
-                device.compliant = json.members[0].compliance.to_string()
-            }
+            .await?
+            .error_for_status()?
+            .json::<ComplianceResult>()
+            .await?;
+
+        if json.members.len() > 0 {
+            device.compliant = json.members[0].compliance.to_string()
         }
+
         Ok(())
     }
 

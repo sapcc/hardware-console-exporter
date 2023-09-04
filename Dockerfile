@@ -1,4 +1,4 @@
-FROM keppel.eu-de-1.cloud.sap/ccloud-dockerhub-mirror/library/rust:1.67.0 as build
+FROM keppel.eu-de-1.cloud.sap/ccloud-dockerhub-mirror/library/rust:1.72.0 as build
 ENV PKG_CONFIG_ALLOW_CROSS=1
 
 WORKDIR /usr/src/hardware-console-exporter

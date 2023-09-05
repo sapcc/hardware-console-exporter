@@ -1,7 +1,5 @@
 use log::{error, info};
 use reqwest;
-use reqwest::header::{ACCEPT, CONTENT_TYPE};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration, interval};

@@ -1,6 +1,4 @@
 use log::{error, info};
-use reqwest::header::{ACCEPT, CONTENT_TYPE};
-use reqwest::Client;
 use reqwest::{self};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -110,7 +108,7 @@ pub async fn collect_lenovo_metrics(settings: Console, interval_sec: u64, tx: mp
     }
 }
 
-async fn get_nodes(settings: Console, url: Url) -> Result<(Vec<Device>), reqwest::Error>{
+async fn get_nodes(settings: Console, url: Url) -> Result<Vec<Device>, reqwest::Error>{
     let resp = get_request_builder(
         reqwest::Method::GET,
         None,

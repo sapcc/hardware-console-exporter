@@ -6,6 +6,10 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration, interval};
 
+
+use crate::exporter::utils::get_request_builder;
+
+
 use super::Console;
 use super::Node;
 
@@ -83,10 +87,6 @@ struct ComplianceReports {
 
 
 pub async fn collect_dell_metrics(settings: Console, interval_sec: u64, tx: mpsc::Sender<Node>) {
-    let client = match Client::builder().danger_accept_invalid_certs(true).build() {
-        Ok(client) => client,
-        Err(error) => panic!("Problem creating client: {:?}", error),
-    };
     info!("dell client ready. interval: {}", interval_sec);
     let mut interval = interval(Duration::from_secs(interval_sec * 60));
     let comliant_nodes = get_compliant_nodes(settings.clone()).await.unwrap_or_else(|e| {
@@ -95,16 +95,17 @@ pub async fn collect_dell_metrics(settings: Console, interval_sec: u64, tx: mpsc
     });
     let mut host = settings.host.clone();
     host.set_path("/api/DeviceService/Devices");
-    let url = host.as_str();
+
     loop {
         interval.tick().await;
         info!("executing dell metric collect");
 
-        let resp = match client
-            .get(url)
-            .header(CONTENT_TYPE, "application/json")
-            .header(ACCEPT, "application/json")
-            .basic_auth(settings.username.to_string(), settings.password.to_owned())
+        let resp = match get_request_builder(
+            reqwest::Method::GET, 
+            None, 
+            Some(&settings), 
+            host.clone()
+        )
             .send()
             .await
         {
@@ -139,18 +140,15 @@ pub async fn collect_dell_metrics(settings: Console, interval_sec: u64, tx: mpsc
 }
 
 async fn get_compliant_nodes(settings: Console) -> Result<ComplianceReports, reqwest::Error>{
-    let client = match Client::builder().danger_accept_invalid_certs(true).build() {
-        Ok(client) => client,
-        Err(error) => panic!("Problem creating client: {:?}", error),
-    };
     let mut host = settings.host.clone();
     host.set_path("/api/UpdateService/Baselines");
-    let url = host.as_str();
-    let json = client
-        .get(url)
-        .header(CONTENT_TYPE, "application/json")
-        .header(ACCEPT, "application/json")
-        .basic_auth(settings.username.to_string(), settings.password.to_owned())
+
+    let json = get_request_builder(
+        reqwest::Method::GET, 
+        None, 
+        Some(&settings), 
+        host.clone()
+    )
         .send()
         .await?
         .error_for_status()?
@@ -162,12 +160,13 @@ async fn get_compliant_nodes(settings: Console) -> Result<ComplianceReports, req
         Some(t) => {
             let mut host = settings.host.clone();
             host.set_path("/api/JobService/Actions/JobService.RunJobs");
-            let url = host.as_str();
-            client
-                .post(url)
-                .header(CONTENT_TYPE, "application/json")
-                .header(ACCEPT, "application/json")
-                .basic_auth(settings.username.to_string(), settings.password.to_owned())
+
+            get_request_builder(
+                reqwest::Method::POST,
+                None,
+                Some(&settings), 
+                host.clone()
+            )
                 .json(&serde_json::json!({"JobIds": [t.task_id], "AllJobs":false}))
                 .send()
                 .await?
@@ -178,12 +177,13 @@ async fn get_compliant_nodes(settings: Console) -> Result<ComplianceReports, req
             info!("compliance check finished");
             let mut host = settings.host.clone();
             host.set_path(format!("/api/UpdateService/Baselines({})/DeviceComplianceReports", t.id).as_str());
-            let url = host.as_str();
-            let json = client
-                .get(url)
-                .header(CONTENT_TYPE, "application/json")
-                .header(ACCEPT, "application/json")
-                .basic_auth(settings.username.to_string(), settings.password.to_owned())
+
+            let json = get_request_builder(
+                reqwest::Method::GET, 
+                None, 
+                Some(&settings), 
+                host.clone()
+            )
                 .send()
                 .await?
                 .error_for_status()?

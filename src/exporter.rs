@@ -12,6 +12,7 @@ use tokio::time::*;
 pub mod dell;
 pub mod hpe;
 pub mod lenovo;
+pub mod utils;
 use super::settings::Console;
 use super::settings::Settings;
 

@@ -9,6 +9,8 @@ use tokio::sync::mpsc;
 use super::Console;
 use super::Node;
 
+use crate::exporter::utils::get_request_builder;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Device {
     pub uuid: String,
@@ -93,6 +95,7 @@ pub async fn collect_hpe_metrics(settings: Console, interval_sec: u64, tx: mpsc:
         let resp = match get_request_builder(
             reqwest::Method::GET,
             Some(token.to_string()),
+            None,
             host.to_owned(),
         )
         .send()
@@ -141,7 +144,12 @@ pub async fn collect_hpe_metrics(settings: Console, interval_sec: u64, tx: mpsc:
         let mut host = settings.host.clone();
         host.set_path("rest/server-profiles");
         host.set_query(Some(format!("filter='uuid' = '{}'", device.uuid).as_str()));
-        let json = get_request_builder(reqwest::Method::GET, Some(token.to_string()), host)
+        let json = get_request_builder(
+            reqwest::Method::GET, 
+            Some(token.to_string()),
+            None,
+            host
+        )
             .send()
             .await?
             .error_for_status()?
@@ -164,7 +172,12 @@ pub async fn collect_hpe_metrics(settings: Console, interval_sec: u64, tx: mpsc:
         auth.insert("userName", username);
         auth.insert("password", &settings.password);
 
-        let sess = get_request_builder(reqwest::Method::POST, None, host)
+        let sess = get_request_builder(
+            reqwest::Method::POST, 
+            None,
+            None,
+            host
+        )
             .json(&auth)
             .send()
             .await?
@@ -177,30 +190,15 @@ pub async fn collect_hpe_metrics(settings: Console, interval_sec: u64, tx: mpsc:
     async fn delete_token(settings: &Console, token: String) -> Result<(), reqwest::Error> {
         let mut host = settings.host.clone();
         host.set_path("rest/login-sessions");
-        get_request_builder(reqwest::Method::POST, Some(token), host)
+        get_request_builder(
+            reqwest::Method::POST,
+            Some(token), 
+            None,
+            host
+        )
             .send()
             .await?;
 
         Ok(())
-    }
-
-    fn get_request_builder(
-        method: reqwest::Method,
-        token: Option<String>,
-        url: reqwest::Url,
-    ) -> reqwest::RequestBuilder {
-        let client = match Client::builder().danger_accept_invalid_certs(true).build() {
-            Ok(client) => client,
-            Err(error) => panic!("error creating reqwest client: {:?}", error),
-        };
-        let mut header_map = reqwest::header::HeaderMap::new();
-        header_map.insert(CONTENT_TYPE, "application/json".parse().unwrap());
-        header_map.insert(ACCEPT, "application/json".parse().unwrap());
-        header_map.insert("X-Api-Version", "1400".parse().unwrap());
-        if token.is_some() {
-            header_map.insert("auth", token.unwrap().parse().unwrap());
-        }
-
-        return client.request(method, url).headers(header_map);
     }
 }

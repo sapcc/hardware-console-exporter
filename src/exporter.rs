@@ -28,7 +28,7 @@ pub struct NodeLabels {
 pub struct Node {
     pub device_name: String,
     pub model: String,
-    pub status: u16,
+    pub health_status: u16,
     pub connection_state: u8,
     pub power_state: u16,
     pub compliant: u8,

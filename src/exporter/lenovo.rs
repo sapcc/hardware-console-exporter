@@ -36,7 +36,7 @@ impl From<Device> for Node {
         let connection = 0;
         Self {
             device_name: d.device_name,
-            status,
+            health_status: status,
             model: d.model,
             power_state: power,
             connection_state: connection,

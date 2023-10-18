@@ -29,7 +29,7 @@ impl From<Device> for Node {
         let compliant = if d.compliant == "Compliant" { 1 } else { 0 };
         Self {
             device_name: d.device_name,
-            status,
+            health_status: status,
             model: d.model,
             power_state: power,
             connection_state: 0,

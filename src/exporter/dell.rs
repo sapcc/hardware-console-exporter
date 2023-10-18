@@ -32,7 +32,7 @@ impl From<Device> for Node {
         let connection = if d.connection_state { 1 } else { 0 };
         Self {
             device_name: d.device_name,
-            status,
+            health_status: status,
             model: d.model,
             power_state: power,
             connection_state: connection,

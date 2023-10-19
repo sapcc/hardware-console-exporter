@@ -24,7 +24,7 @@ consoles:
     username: "hw_admin"
     policy_name: "firmware_70u3i"
   # Interval in minutes to run the console exporter.
-  interval_in_min: 120
+  interval_in_min: 1440
 
 podAnnotations: {}
 

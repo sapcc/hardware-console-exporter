@@ -41,6 +41,7 @@ impl From<Device> for Node {
             power_state: power,
             connection_state: connection,
             compliant: compliant,
+            console: "lenovo".to_string(),
         }
     }
 }

@@ -32,6 +32,7 @@ pub struct Node {
     pub connection_state: u8,
     pub power_state: u16,
     pub compliant: u8,
+    pub console: String,
 }
 
 #[derive(Debug)]
@@ -65,17 +66,6 @@ impl Exporter {
         let tx02 = tx.clone();
         let s = self.settings.clone();
 
-        let mut interval = time::interval(Duration::from_secs(self.settings.interval_in_min * 60));
-        let m = self.metrics.clone();
-
-        actix_web::rt::spawn(async move {
-            loop {
-                interval.tick().await;
-                debug!("clearing metrics");
-                m.clear();
-            }
-        });
-
         actix_web::rt::spawn(async move {
             collect_dell_metrics(s.dell, s.interval_in_min, tx).await;
         });
@@ -87,7 +77,7 @@ impl Exporter {
         });
 
         while let Some(n) = rx.recv().await {
-            println!("got = {:?}", n.device_name);
+            println!("{:?}=>{:?}", n.console, n.device_name);
             if !self.nodes.contains(&n.device_name) {
                 self.nodes.push(n.device_name.clone());
             }

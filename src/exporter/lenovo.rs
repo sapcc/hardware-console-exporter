@@ -41,7 +41,7 @@ impl From<Device> for Node {
             power_state: power,
             connection_state: connection,
             compliant: compliant,
-            console: "lenovo".to_string(),
+            console: "lxca".to_string(),
         }
     }
 }
@@ -73,11 +73,28 @@ struct CompliancePolicy {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct ComplianceResult {
+struct ComplianceResults {
+   all: Vec<ComplianceServers>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct ComplianceServers{
+    racklist: Option<Vec<ComplianceServer>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct ComplianceServer {
+    #[serde(default = "default_resource")]
     #[serde(rename = "policyName")]
     policy_name: String,
+    #[serde(default = "default_resource")]
     #[serde(rename = "endpointCompliant")]
     endpoint_compliant: String,
+    uuid: String,
+}
+
+fn default_resource() -> String {
+    "NA".to_string()
 }
 
 pub async fn collect_lenovo_metrics(settings: Console, interval_sec: u64, tx: mpsc::Sender<Node>) {
@@ -94,13 +111,17 @@ pub async fn collect_lenovo_metrics(settings: Console, interval_sec: u64, tx: mp
             error!("error getting nodes: {}", e);
             vec![]
         });
-        for mut device in devices{
-            if attach_device_compliance_policy(settings.clone(), device.uuid.to_string())
-                .await
-                .is_ok()
-            {
-                set_device_compliance_status(&settings, &mut device).await;
-            }
+        let mut cloned_devices = devices.clone();
+        for device in devices{
+            attach_device_compliance_policy(settings.clone(), device.uuid.to_string()).await
+                .unwrap_or_else(|e| {
+                    error!("error getting nodes: {}", e);
+                });
+
+        }
+        set_device_compliance_status(&settings, &mut cloned_devices).await;
+
+        for device in cloned_devices {
             let node = Node::from(device);
             tx.send(node).await.unwrap_or_else(|error| {
                 error!("error sending node on channel: {:?}", error);
@@ -154,11 +175,10 @@ async fn attach_device_compliance_policy(
     Ok(())
 }
 
-async fn set_device_compliance_status(settings: &Console, device: &mut Device) {
+async fn set_device_compliance_status(settings: &Console, devices: &mut Vec<Device>) {
     let mut host = settings.host.clone();
     host.set_path("/compliancePolicies/persistedResult");
-    host.set_query(Some(format!("type=SERVER&uuid={}", device.uuid).as_str()));
-    device.compliant = "no".to_string();
+    host.set_query(Some("type=SERVER"));
     let resp = match get_request_builder(
         reqwest::Method::GET, 
         None,
@@ -176,15 +196,24 @@ async fn set_device_compliance_status(settings: &Console, device: &mut Device) {
     };
 
     if resp.status() == reqwest::StatusCode::OK {
-        let json = match resp.json::<ComplianceResult>().await {
+        let results = match resp.json::<ComplianceResults>().await {
             Ok(parsed) => parsed,
             Err(e) => {
                 error!("error parsing lxca json: {}", e);
                 return;
             }
         };
-        if json.policy_name == settings.policy_name {
-            device.compliant = json.endpoint_compliant.to_string();
-        }
+
+        println!("{:?}", results.all[0].racklist);
+        let cloned: Option<Vec<ComplianceServer>> = results.all[0].racklist.clone();
+        cloned.unwrap_or(
+            Vec::<ComplianceServer>::new()
+        ).iter()
+            .filter(|c| c.policy_name == settings.policy_name)
+            .for_each(|c| {
+                devices.iter_mut()  
+                    .find(|d| d.uuid == c.uuid)
+                    .map(|d| d.compliant = c.endpoint_compliant.to_string());
+            });
     }
 }

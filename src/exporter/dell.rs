@@ -37,7 +37,7 @@ impl From<Device> for Node {
             power_state: power,
             connection_state: connection,
             compliant: 0,
-            console: "dell".to_string(),
+            console: "openmanage".to_string(),
         }
     }
 }

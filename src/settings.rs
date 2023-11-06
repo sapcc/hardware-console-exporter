@@ -13,6 +13,7 @@ pub struct Console {
     pub password: Option<String>,
     #[serde(default = "default_policy_name")]
     pub policy_name: String,
+    pub manufacturer_name: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -23,6 +24,9 @@ pub struct Settings {
     pub hpe: Console,
     #[serde(default = "default_interval")]
     pub interval_in_min: u64,
+    #[serde(deserialize_with = "de_url")]
+    pub netbox_url: Url,
+    pub region: String,
 }
 
 fn default_interval() -> u64 {

@@ -6,12 +6,14 @@ use tokio::sync::mpsc;
 
 use super::Console;
 use super::Node;
+use super::Netbox;
 
-use crate::exporter::utils::get_request_builder;
+use crate::exporter::utils::{get_request_builder, deserialize_name};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Device {
     pub uuid: String,
+    #[serde(deserialize_with = "deserialize_name")]
     #[serde(alias = "name")]
     pub device_name: String,
     pub model: String,
@@ -34,7 +36,8 @@ impl From<Device> for Node {
             power_state: power,
             connection_state: 0,
             compliant: compliant,
-            console: "oneview".to_string(),
+            console: "na".to_string(),
+            uuid: d.uuid,
         }
     }
 }
@@ -73,7 +76,7 @@ struct ComplianceResult {
     members: Vec<Compliance>,
 }
 
-pub async fn collect_hpe_metrics(settings: Console, interval_sec: u64, tx: mpsc::Sender<Node>) {
+pub async fn collect_hpe_metrics(settings: Console,  netbox: Netbox, interval_sec: u64, tx: mpsc::Sender<Node>) {
     info!("hpe client ready. interval: {}", interval_sec);
     let mut interval = interval(Duration::from_secs(interval_sec * 60));
     let mut host = settings.host.clone();
@@ -107,27 +110,48 @@ pub async fn collect_hpe_metrics(settings: Console, interval_sec: u64, tx: mpsc:
             }
         };
 
-        if resp.status() == reqwest::StatusCode::OK {
-            let json = match resp.json::<APIResponse>().await {
-                Ok(parsed) => parsed,
-                Err(e) => {
-                    error!("error parsing lxca json: {}", e);
-                    continue;
-                }
-            };
+        if resp.status() != reqwest::StatusCode::OK {
+            error!("error api lxca code: {}", resp.status());
+            continue
+        }
 
-            for mut device in json.value {
-                set_device_compliance_status(&settings, token.to_string(), &mut device)
-                    .await
-                    .unwrap_or_else(|error| {
-                        error!("error checking device compliancy: {:?}", error);
-                    });
-                let node = Node::from(device);
-                tx.send(node).await.unwrap_or_else(|error| {
-                    error!("error sending node on channel: {:?}", error);
-                })
+        let json = match resp.json::<APIResponse>().await {
+            Ok(parsed) => parsed,
+            Err(e) => {
+                error!("error parsing lxca json: {}", e);
+                continue;
+            }
+        };
+
+        for mut device in json.value.clone() {
+            set_device_compliance_status(&settings, token.to_string(), &mut device)
+                .await
+                .unwrap_or_else(|error| {
+                    error!("error checking device compliancy: {:?}", error);
+                });
+        }
+
+        let mut nodes =  json.value.clone().into_iter().map(|d| Node::from(d)).collect::<Vec<Node>>();
+        let netbox_devices = netbox.get_devices_by_manufacturer(settings.manufacturer_name.to_string()).await 
+        .unwrap_or_else(|e| {
+            error!("error getting netbox devices: {}", e);
+            vec![]
+        });
+
+        for device in netbox_devices {
+            let node = nodes.iter_mut()
+                .find(|n| device.name.to_lowercase().contains(n.device_name.to_lowercase().as_str()));
+            if node.is_some() {
+                let n = node.unwrap();
+                n.console = "oneview".to_string();
+                tx.send(n.clone()).await.unwrap();
+            } else {
+                let mut n = Node::default();
+                n.device_name = device.name;
+                tx.send(n.clone()).await.unwrap();
             }
         }
+
         delete_token(&settings, token)
             .await
             .unwrap_or_else(|error| {

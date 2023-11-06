@@ -8,6 +8,7 @@ use std::sync::Mutex;
 
 mod exporter;
 mod settings;
+mod netbox;
 use exporter::Exporter;
 use settings::Settings;
 

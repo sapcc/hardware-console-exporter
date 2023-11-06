@@ -1,20 +1,19 @@
 use actix_web;
-use log::debug;
 use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::family::Family;
 use prometheus_client::metrics::gauge::Gauge;
 use prometheus_client::registry::Registry;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tokio::time;
-use tokio::time::*;
 
 pub mod dell;
 pub mod hpe;
 pub mod lenovo;
 pub mod utils;
+
 use super::settings::Console;
 use super::settings::Settings;
+use super::netbox::Netbox;
 
 use dell::collect_dell_metrics;
 use hpe::collect_hpe_metrics;
@@ -24,7 +23,7 @@ use lenovo::collect_lenovo_metrics;
 pub struct NodeLabels {
     pub name: String,
 }
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash, EncodeLabelSet)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash, EncodeLabelSet, Default)]
 pub struct Node {
     pub device_name: String,
     pub model: String,
@@ -33,6 +32,7 @@ pub struct Node {
     pub power_state: u16,
     pub compliant: u8,
     pub console: String,
+    pub uuid: String,
 }
 
 #[derive(Debug)]
@@ -66,14 +66,17 @@ impl Exporter {
         let tx02 = tx.clone();
         let s = self.settings.clone();
 
+        let netbox = Netbox::new(s.netbox_url.to_owned(), s.region.to_owned());
+        let netbox_hpe = netbox.clone();
+        let netbox_lenovo = netbox.clone();
         actix_web::rt::spawn(async move {
-            collect_dell_metrics(s.dell, s.interval_in_min, tx).await;
+            collect_dell_metrics(s.dell, netbox.clone(), s.interval_in_min, tx).await;
         });
         actix_web::rt::spawn(async move {
-            collect_lenovo_metrics(s.lenovo, s.interval_in_min, tx01).await;
+            collect_lenovo_metrics(s.lenovo, netbox_lenovo, s.interval_in_min, tx01).await;
         });
         actix_web::rt::spawn(async move {
-            collect_hpe_metrics(s.hpe, s.interval_in_min, tx02).await;
+            collect_hpe_metrics(s.hpe, netbox_hpe, s.interval_in_min, tx02).await;
         });
 
         while let Some(n) = rx.recv().await {

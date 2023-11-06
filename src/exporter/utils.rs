@@ -1,4 +1,5 @@
 use reqwest::header::{ACCEPT, CONTENT_TYPE};
+use serde::{Deserialize, Deserializer, de::Error};
 use reqwest::Client;
 
 use super::Console;
@@ -29,4 +30,17 @@ pub fn get_request_builder(
     }
 
     return client.request(method, url).headers(header_map);
+}
+
+pub fn deserialize_name<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let buf = String::deserialize(deserializer)?;
+    let name = buf.split(".").collect::<Vec<&str>>();
+    if name.len() == 0 {
+        return Err(D::Error::custom("invalid compliance name"));
+    }
+    let name = name[0].to_string().replace("r", "");
+    Ok(name)
 }

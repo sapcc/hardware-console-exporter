@@ -7,13 +7,15 @@ use url::Url;
 
 use super::Console;
 use super::Node;
+use super::Netbox;
 
-use crate::exporter::utils::get_request_builder;
+use crate::exporter::utils::{get_request_builder, deserialize_name};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Device {
     pub uuid: String,
     #[serde(alias = "hostname")]
+    #[serde(deserialize_with = "deserialize_name")]
     pub device_name: String,
     pub model: String,
     #[serde(alias = "Status")]
@@ -41,7 +43,8 @@ impl From<Device> for Node {
             power_state: power,
             connection_state: connection,
             compliant: compliant,
-            console: "lxca".to_string(),
+            console: "na".to_string(),
+            uuid: d.uuid,
         }
     }
 }
@@ -97,7 +100,7 @@ fn default_resource() -> String {
     "NA".to_string()
 }
 
-pub async fn collect_lenovo_metrics(settings: Console, interval_sec: u64, tx: mpsc::Sender<Node>) {
+pub async fn collect_lenovo_metrics(settings: Console, netbox: Netbox, interval_sec: u64, tx: mpsc::Sender<Node>) {
     info!("lenovo client ready. interval: {}", interval_sec);
     let mut interval = interval(Duration::from_secs(interval_sec * 60));
     let mut host = settings.host.clone();
@@ -120,12 +123,25 @@ pub async fn collect_lenovo_metrics(settings: Console, interval_sec: u64, tx: mp
 
         }
         set_device_compliance_status(&settings, &mut cloned_devices).await;
+        let mut nodes =  cloned_devices.clone().into_iter().map(|d| Node::from(d)).collect::<Vec<Node>>();
+        let netbox_devices = netbox.get_devices_by_manufacturer(settings.manufacturer_name.to_string()).await 
+        .unwrap_or_else(|e| {
+            error!("error getting netbox devices: {}", e);
+            vec![]
+        });
 
-        for device in cloned_devices {
-            let node = Node::from(device);
-            tx.send(node).await.unwrap_or_else(|error| {
-                error!("error sending node on channel: {:?}", error);
-            })
+        for device in netbox_devices {
+            let node = nodes.iter_mut()
+                .find(|n| device.name.to_lowercase().contains(n.device_name.to_lowercase().as_str()));
+            if node.is_some() {
+                let n = node.unwrap();
+                n.console = "lxca".to_string();
+                tx.send(n.clone()).await.unwrap();
+            } else {
+                let mut n = Node::default();
+                n.device_name = device.name;
+                tx.send(n.clone()).await.unwrap();
+            }
         }
     }
 }
@@ -204,7 +220,6 @@ async fn set_device_compliance_status(settings: &Console, devices: &mut Vec<Devi
             }
         };
 
-        println!("{:?}", results.all[0].racklist);
         let cloned: Option<Vec<ComplianceServer>> = results.all[0].racklist.clone();
         cloned.unwrap_or(
             Vec::<ComplianceServer>::new()

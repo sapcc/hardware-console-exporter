@@ -11,12 +11,17 @@ data:
     dell:
       host: "https:/openmanage.{{ .Values.global.region }}.cloud.sap"
       username: {{ .Values.consoles.dell.username }}
+      manufacturer_name: "dell"
     hpe:
       host: "https://oneview.{{ .Values.global.region }}.cloud.sap"
       loginDomain: "local"
       username: {{ .Values.consoles.hpe.username }}
+      manufacturer_name: "hpe"
     lenovo:
       host: "https://lxca.{{ .Values.global.region }}.cloud.sap"
       username: {{ .Values.consoles.lenovo.username }}
       policy_name: {{ .Values.consoles.lenovo.policy_name }}
+      manufacturer_name: "lenovo"
     interval_in_min: {{ .Values.consoles.interval_in_min }}
+    region: "{{ .Values.global.region }}"
+    netbox_url: "https://netbox.global.cloud.sap"

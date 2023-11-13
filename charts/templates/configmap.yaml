@@ -7,10 +7,11 @@ metadata:
     app: hardware-console-exporter
 data:
   default.yaml: |
-    debug: true
+    debug: {{ .Values.debug.enabled }}
     dell:
       host: "https:/openmanage.{{ .Values.global.region }}.cloud.sap"
       username: {{ .Values.consoles.dell.username }}
+       policy_name: {{ .Values.consoles.dell.policy_name }}
       manufacturer_name: "dell"
     hpe:
       host: "https://oneview.{{ .Values.global.region }}.cloud.sap"

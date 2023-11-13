@@ -25,6 +25,7 @@ spec:
         prometheus.io/targets: {{  required ".Values.alerts.prometheus missing" .Values.alerts.prometheus | quote }}
     spec:
       containers:
+      {{- if .Values.debug.enabled }}
         - name: debug
           image: keppel.eu-de-1.cloud.sap/ccloud-dockerhub-mirror/library/ubuntu
           command: ["/bin/bash", "-c", "--"]
@@ -33,6 +34,7 @@ spec:
             - name: config
               mountPath: /etc/default.yaml
               subPath: default.yaml
+      {{- end }}
         - name: exporter
           env:
             - name: RUST_LOG

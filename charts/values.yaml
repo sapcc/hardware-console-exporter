@@ -5,7 +5,7 @@ owner-info:
     - Stefan Hipfel
     - Bernd Kuespert
     - Jens Sandmann
-  helm-chart-url: https://github.com/sapcc/helm-charts/tree/master/openstack/ironic
+  helm-chart-url: https://github.com/sapcc/hardware-console-exporter/tree/main/charts
 
 replicaCount: 1
 
@@ -15,14 +15,18 @@ hardware_console_exporter:
     pullPolicy: IfNotPresent
     tag: "latest"
 
+debug:
+  enabled: false
+
 consoles:
   dell:
     username: "hw_admin"
+    policy_name: "firmware_70u3l"
   hpe:
     username: "hw_admin"
   lenovo:
     username: "hw_admin"
-    policy_name: "firmware_70u3i"
+    policy_name: "firmware_70u3l"
   # Interval in minutes to run the console exporter.
   interval_in_min: 1440
 

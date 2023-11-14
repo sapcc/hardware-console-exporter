@@ -66,7 +66,7 @@ impl Exporter {
         let tx02 = tx.clone();
         let s = self.settings.clone();
 
-        let netbox = Netbox::new(s.netbox_url.to_owned(), s.region.to_owned());
+        let netbox = Netbox::new(s.netbox_url.to_owned(), s.query.to_owned());
         let netbox_hpe = netbox.clone();
         let netbox_lenovo = netbox.clone();
         actix_web::rt::spawn(async move {

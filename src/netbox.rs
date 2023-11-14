@@ -17,22 +17,23 @@ pub struct NetboxDeviceList {
 #[derive(Debug, Clone)]
 pub struct Netbox {
     url: Url,
-    region: String,
+    query: String,
 }
 
 
 impl Netbox {
-    pub fn new(url: Url, region: String) -> Netbox {
+    pub fn new(url: Url, query: String) -> Netbox {
         Netbox {
             url: url,
-            region: region,
+            query: query,
         }
     }
 
     pub async fn get_devices_by_manufacturer(&self, manufacturer: String) -> reqwest::Result<Vec<NetboxDevice>> {
         let mut host = self.url.clone();
+        let query = self.query.to_owned();
         host.set_path("/api/dcim/devices/");
-        host.set_query(Some(format!("limit=2000&role=server&region={}&manufacturer={}&status=active&status=staged", self.region, manufacturer).as_str()));
+        host.set_query(Some(format!("{query}&limit=2000&manufacturer={}", manufacturer).as_str()));
         let client = match Client::builder().danger_accept_invalid_certs(true).build() {
             Ok(client) => client,
             Err(error) => panic!("error creating reqwest client: {:?}", error),

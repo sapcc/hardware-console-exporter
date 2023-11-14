@@ -26,7 +26,7 @@ pub struct Settings {
     pub interval_in_min: u64,
     #[serde(deserialize_with = "de_url")]
     pub netbox_url: Url,
-    pub region: String,
+    pub query: String,
 }
 
 fn default_interval() -> u64 {

@@ -1,6 +1,6 @@
 owner-info:
   support-group: foundation
-  service: baremetal
+  service: hwconsole-exporter
   maintainers:
     - Stefan Hipfel
     - Bernd Kuespert

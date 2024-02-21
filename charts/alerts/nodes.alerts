@@ -8,7 +8,7 @@ groups:
     expr: hardware_consoles == 0
     for: 30m
     labels:
-      context: {{ $labels.device_name }}
+      context: '{{ $labels.device_name }}'
       service: baremetal
       severity: info
       support_group: foundation
@@ -22,7 +22,7 @@ groups:
     expr: hardware_consoles{console="na"}
     for: 30m
     labels:
-      context: {{ $labels.device_name }}
+      context: '{{ $labels.device_name }}'
       service: baremetal
       severity: info
       support_group: foundation

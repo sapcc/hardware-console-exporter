@@ -1,0 +1,16 @@
+{{- range $path, $bytes := .Files.Glob "alerts/*.alerts" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+
+metadata:
+  name: {{ replace "/" "." $path }}
+  labels:
+    app: hardware-console-exporter
+    type: alerting-rules
+    prometheus: infra-collector
+
+spec:
+{{ printf "%s" $bytes | indent 2 }}
+
+ {{- end }}

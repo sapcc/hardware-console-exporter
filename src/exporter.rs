@@ -23,7 +23,7 @@ use lenovo::collect_lenovo_metrics;
 pub struct NodeLabels {
     pub name: String,
 }
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash, EncodeLabelSet, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash, EncodeLabelSet)]
 pub struct Node {
     pub device_name: String,
     pub model: String,
@@ -33,6 +33,21 @@ pub struct Node {
     pub compliant: u8,
     pub console: String,
     pub uuid: String,
+}
+
+impl Default for Node {
+    fn default() -> Node {
+        Node {
+            console: "na".to_string(),
+            compliant: 0,
+            connection_state: 0,
+            device_name: "na".to_string(),
+            health_status: 0,
+            model: "na".to_string(),
+            power_state: 0,
+            uuid: "na".to_string(),
+        }
+    }
 }
 
 #[derive(Debug)]

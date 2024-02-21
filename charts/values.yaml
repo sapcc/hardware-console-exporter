@@ -22,11 +22,14 @@ consoles:
   dell:
     username: "hw_admin"
     policy_name: "firmware_70u3l"
+    password: DEFINED_IN_SECRET
   hpe:
     username: "hw_admin"
+    password: DEFINED_IN_SECRET
   lenovo:
     username: "hw_admin"
     policy_name: "firmware_70u3l"
+    password: DEFINED_IN_SECRET
   # Interval in minutes to run the console exporter.
   interval_in_min: 1440
 

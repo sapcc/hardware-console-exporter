@@ -138,8 +138,7 @@ pub async fn collect_lenovo_metrics(settings: Console, netbox: Netbox, interval_
                 n.console = "lxca".to_string();
                 tx.send(n.clone()).await.unwrap();
             } else {
-                let mut n = Node::default();
-                n.device_name = device.name;
+                let n = Node { device_name: device.name, ..Default::default() };
                 tx.send(n.clone()).await.unwrap();
             }
         }

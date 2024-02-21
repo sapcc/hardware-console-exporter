@@ -130,8 +130,7 @@ pub async fn collect_dell_metrics(settings: Console, netbox: Netbox, interval_se
                 n.console = "openmanage".to_string();
                 tx.send(n.clone()).await.unwrap();
             } else {
-                let mut n = Node::default();
-                n.device_name = device.name;
+                let n = Node { device_name: device.name, ..Default::default() };
                 tx.send(n.clone()).await.unwrap();
             }
         }

@@ -9,7 +9,7 @@ groups:
     for: 30m
     labels:
       context: '{{ $labels.device_name }}'
-      service: baremetal
+      service: hwconsole-exporter
       severity: info
       support_group: foundation
       meta: 'Node {{ $labels.device_name }} is not compliant'
@@ -23,7 +23,7 @@ groups:
     for: 30m
     labels:
       context: '{{ $labels.device_name }}'
-      service: baremetal
+      service: hwconsole-exporter
       severity: info
       support_group: foundation
       meta: 'Node {{ $labels.device_name }} is not added to a hardware console'

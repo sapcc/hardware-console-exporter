@@ -21,6 +21,7 @@ spec:
         app: hardware-console-exporter
       annotations:
         configmap-etc-hash: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- include "utils.linkerd.pod_and_service_annotation" . | indent 8 }}
         prometheus.io/scrape: "true"
         prometheus.io/targets: {{  required ".Values.alerts.prometheus missing" .Values.alerts.prometheus | quote }}
     spec:

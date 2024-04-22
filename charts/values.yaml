@@ -7,6 +7,9 @@ owner-info:
     - Jens Sandmann
   helm-chart-url: https://github.com/sapcc/hardware-console-exporter/tree/main/charts
 
+global:
+  linkerd_requested: true
+
 replicaCount: 1
 
 hardware_console_exporter:
